@@ -1,0 +1,13 @@
+Re1 : A1 A2 A3
+Re2 : A1 A4 A5
+Ro1 : Re1 A3
+Ro1 : Re1 A2
+Ro2 : Re2 A4
+U1 : + Ro1
+U2 : + Ro2
+U1 : Re1 A3
+U2 : Re1 A2
+U2 : + Ro1
+U2 : Re1 A2
+U1 : - Ro2
+U1 : Re2 A4
