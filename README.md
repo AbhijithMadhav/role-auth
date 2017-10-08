@@ -1,39 +1,57 @@
 
+## Assumptions
+* Assumed that id's are strings. The models can be parameterized to make the ids more generic
+* There are no hierarchical relationships beetween roles. 
+* Thread safe but no concurrent reads
 
-![pagerank](https://user-images.githubusercontent.com/1021302/31058094-7795fcf0-a70b-11e7-8d97-c3e7941415ed.png)
 
-## Regarding Design
-Refer to `pagerank.png`(above) for a visual representation of a high level design. Java docs capture lower level details.
+## Notes
+Broadly there is a layered design with models, services and data access objects.
 
-The important entities are 
-* `PageRankService` : Encapsulates operations needed to rank pages w.r.t a query.
-* `PageScoreCalculator` : Represents a computation engine which encapsulates logic needed to calculate the page score of a page w.r.t. a given query
-* `PageRankStore` : Repository of ranked lists
+Currently the service layer is mostly wrappers around dao calls but can be used later to implement business logic.
 
-Custom implementations of `PageScoreCalculator` and `PageRankStore` can be used for different page score calculation algorithms and for different page rank ordering requirements
+THe choice of using an in memory datastructures for dao layer is not desirable. This is because the entities have relationships between them which require mapping validations. I have had to, at a primitive level, implement relationship validations(to ensure references remain accurate). Also as everything in java is reference, I've had to deep copy objects to store them separately as in a typical storage solution. This has related in an API which clients have to carefully implement to get things correct.
 
-## Implementation for the requirements
-* `DefaultPageRankService` : Composition of `PositionalWeightBasedPageScoreCalculator` and `InMemoryBoundedPageRankStore` for the purposes of meeting the requirements listed.
-* `PositionalWeightBasedPageScoreCalculator` : Implementation of `PageScoreCalculator` which encapsulates the logic listed in the requirements
-* `InMemoryBoundedPageRankStore` : Implementation of `PageRankStore`. **Bounded** to ensure that top N results for each queries are kept track off. Memory based implementation is for demo purposes. This will need to be augmented with a more scalable larger store for real-world use cases. For example, a multi-level distributed cache using Redis
-
-## Models
-* `Page` : Represents a web page with key words
-* `Query` : Represents a query
-* `PageScore` : The quantification of a page indicating its relevance to a query
+Working with a relational db, say even SQLlite, would have been more worthwhile as it would have taken care of the above concerns. 
 
 ## Building and running
-Unzip or clone the source
+Unzip or clone the source(..)
 ```bash
-$ cd pagerank-master
+$ cd role-auth-master
 $ gradle build # or ./gradlew build
-$ gradle run # Executes for the input given in the requirements
+$ gradle run # Executes for default input file
 ```
 
 To execute for other inputs
 ```bash
 $ cd build/distributions
-$ unzip pagerank-1.0.zip
-$ cd pagerank-1.0/bin/
-$ ./pagerank <input-file-path>
+$ unzip role-auth-1.0.zip
+$ cd role-auth-1.0/bin/
+$ ./role <input-file-path>
+```
+
+## Input file format
+Input file can be composed using the below types of inputs
+* Resource definition
+* Role definition
+* User definition and role assignment
+* Access query
+
+Refer to the illustration for syntax
+
+```
+Re1 : A1 A2 A3      # Resource definition. Resource name has to start with 'Re'. Action definition is implicit
+Re2 : A1 A4 A5
+Ro1 : Re1 A3		# Role definition. Role name has to start with a 'Ro'. Resource and action mapping must have been established previously thourough a resource definition
+Ro1 : Re1 A2
+Ro2 : Re2 A4
+Ro3 : Re1 A5
+U1 : + Ro1          # Role assignment. User definition is implicit. User name has to start with 'U'. Role must be existing. 
+U2 : + Ro2			# '+' is adding roles
+U1 : Re1 A3			# Access query. Does U1 have A3 access on Re1
+U2 : Re1 A2
+U2 : + Ro1
+U2 : Re1 A2
+U1 : - Ro2          # '-' is removing roles
+U1 : Re2 A4
 ```
